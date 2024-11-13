@@ -1,120 +1,105 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <limits.h>
 
-static unsigned long int next = 1;
+#define INF INT_MAX
+#define MAX_VERTICES 100
 
-int my_rand(void) {
-	return ((next = next * 1103515245 + 12345) % ((u_long) RAND_MAX + 1));
+int graph[MAX_VERTICES][MAX_VERTICES];
+int VERTICES;
+
+void carregarGrafo(char *nome_arquivo) {
+    FILE *arquivo = fopen(nome_arquivo, "r");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo %s\n", nome_arquivo);
+        exit(1);
+    }
+
+    // Inicializa a matriz de adjacencia
+    for (int i = 0; i < MAX_VERTICES; i++) {
+        for (int j = 0; j < MAX_VERTICES; j++) {
+            graph[i][j] = (i == j) ? 0 : INF;
+        }
+    }
+
+    int u, v, peso;
+    VERTICES = 0;
+
+    // Le cada linha do arquivo e preenche a matriz de adjacencia
+    while (fscanf(arquivo, "%d %d %d", &u, &v, &peso) != EOF) {
+        graph[u][v] = peso;
+        graph[v][u] = peso;  // Grafo não-direcionado
+        if (u > VERTICES) VERTICES = u;
+        if (v > VERTICES) VERTICES = v;
+    }
+    VERTICES++;
+
+    fclose(arquivo);
 }
 
-void my_srand(unsigned int seed) {
-	next = seed;
+void dijkstra(int start, int dist[]) {
+    int visited[MAX_VERTICES] = {0};
+
+    // Inicializa distancias com infinito e a distancia do vertice inicial com 0
+    for (int i = 0; i < VERTICES; i++) {
+        dist[i] = INF;
+    }
+    dist[start] = 0;
+
+    // Algoritmo de Dijkstra
+    for (int count = 0; count < VERTICES - 1; count++) {
+        int u = -1;
+        int min_dist = INF;
+
+        for (int i = 0; i < VERTICES; i++) {
+            if (!visited[i] && dist[i] < min_dist) {
+                u = i;
+                min_dist = dist[i];
+            }
+        }
+
+        if (u == -1) break;
+
+        visited[u] = 1;
+
+        for (int v = 0; v < VERTICES; v++) {
+            if (!visited[v] && graph[u][v] != INF && dist[u] != INF && dist[u] + graph[u][v] < dist[v]) {
+                dist[v] = dist[u] + graph[u][v];
+            }
+        }
+    }
 }
 
-struct Graph {
-	int nNodes;
-	int *nEdges;
-	int **edges;
-	int **w;
-};
+void exportarCaminhosMaisCurtos(char *nome_arquivo) {
+    FILE *arquivo = fopen(nome_arquivo, "w");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo %s para escrita\n", nome_arquivo);
+        exit(1);
+    }
 
-struct Graph *createRandomGraph(int nNodes, int nEdges, int seed) {
-	my_srand(seed);
+    int dist[MAX_VERTICES];
+    
+    for (int i = 0; i < VERTICES; i++) {
+        dijkstra(i, dist);
+        fprintf(arquivo, "Distancias a partir do vertice %d:\n", i);
+        for (int j = 0; j < VERTICES; j++) {
+            if (dist[j] == INF) {
+                fprintf(arquivo, "Vertice %d: INFINITO\n", j);
+            } else {
+                fprintf(arquivo, "Vertice %d: %d\n", j, dist[j]);
+            }
+        }
+        fprintf(arquivo, "\n");
+    }
 
-	struct Graph *graph = (struct Graph *) malloc(sizeof(struct Graph));
-	graph->nNodes = nNodes;
-	graph->nEdges = (int *) malloc(sizeof(int) * nNodes);
-	graph->edges = (int **) malloc(sizeof(int *) * nNodes);
-	graph->w = (int **) malloc(sizeof(int *) * nNodes);
-
-	int k, v;
-	for (v = 0; v < nNodes; v++) {
-		graph->edges[v] = (int *) malloc(sizeof(int) * nNodes);
-		graph->w[v] = (int *) malloc(sizeof(int) * nNodes);
-		graph->nEdges[v] = 0;
-	}
-
-	int source = 0;
-	for (source = 0; source < nNodes; source++) {
-		int nArestasVertice = (double) nEdges / nNodes
-				* (0.5 + my_rand() / (double) RAND_MAX);
-		for (k = nArestasVertice; k >= 0; k--) {
-			int dest = my_rand() % nNodes;
-			int w = 1 + (my_rand() % 10);
-			graph->edges[source][graph->nEdges[source]] = dest;
-			graph->w[source][graph->nEdges[source]++] = w;
-		}
-	}
-
-	return graph;
+    fclose(arquivo);
 }
 
-int *dijkstra(struct Graph *graph, int source) {
-	int nNodes = graph->nNodes;
-	int *visited = (int *) malloc(sizeof(int) * nNodes);
-	int *distances = (int *) malloc(sizeof(int) * nNodes);
-	int k, v;
+int main() {
+    carregarGrafo("grafo.txt");
+    exportarCaminhosMaisCurtos("resultado-sequencial.txt");
 
-	for (v = 0; v < nNodes; v++) {
-		distances[v] = INT_MAX;
-		visited[v] = 0;
-	}
-	distances[source] = 0;
-	visited[source] = 1;
-	for (k = 0; k < graph->nEdges[source]; k++)
-		distances[graph->edges[source][k]] = graph->w[source][k];
+    printf("Caminhos mais curtos exportados para o arquivo resultado-sequencial.txt\n");
 
-	for (v = 1; v < nNodes; v++) {
-		int min = 0;
-		int minValue = INT_MAX;
-		for (k = 0; k < nNodes; k++)
-			if (visited[k] == 0 && distances[k] < minValue) {
-				minValue = distances[k];
-				min = k;
-			}
-
-		visited[min] = 1;
-
-		for (k = 0; k < graph->nEdges[min]; k++) {
-			int dest = graph->edges[min][k];
-			if (distances[dest] > distances[min] + graph->w[min][k])
-				distances[dest] = distances[min] + graph->w[min][k];
-		}
-	}
-
-	free(visited);
-
-	return distances;
-}
-
-int main(int argc, char ** argv) {
-
-	int nNodes;
-	int nEdges;
-	int seed;
-
-	if (argc == 4) {
-		nNodes = atoi(argv[1]);
-		nEdges = atoi(argv[2]);
-		seed = atoi(argv[3]);
-	} else {
-		fscanf(stdin, "%d %d %d", &nNodes, &nEdges, &seed);
-	}
-
-	nEdges = nNodes * nEdges;
-
-	struct Graph *graph = createRandomGraph(nNodes, nEdges, seed);
-
-	int *dist = dijkstra(graph, 0);
-
-	double mean = 0;
-	int v;
-	for (v = 0; v < graph->nNodes; v++)
-		mean += dist[v];
-
-	fprintf(stdout, "%.2f\n", mean / nNodes);
-
-	return 0;
+    return 0;
 }
