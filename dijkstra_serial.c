@@ -2,89 +2,96 @@
 #include <time.h>
 #include <math.h>
 
-#define INT_MAX 100000
+#define INT_MAX 100000  // Define um valor grande para representar "infinito"
 #define TRUE    1
 #define FALSE   0
-#define V 1000
-#define E 4000
+#define V 1000  // Número de vértices
+#define E 4000  // Número de arestas
 
-// Boolean type
 typedef int bool;
 
-// Represents an edge or path between Vertices
 typedef struct {
-    int u;
-    int v;
+    int u;  // Vértice de origem da aresta
+    int v;  // Vértice de destino da aresta
 } Edge;
 
-// Represents a Vertex
 typedef struct {
-    int title;
-    bool visited;
+    int title;     // Identificador do vértice
+    bool visited;  // Indica se o vértice já foi visitado
 } Vertex;
 
-// Prints the array
+// Declaração de funções auxiliares
+int minPath(Vertex *vertices, int *len);
+int minWeight(int *len, Vertex *vertices);
+int minimum(int A, int B);
+int findEdge(Vertex u, Vertex v, Edge *edges, int *weights);
+void DijkstraSequential(Vertex *vertices, Edge *edges, int *weights, Vertex *root);
+void printArray(int *array);
+
 void printArray(int *array) {
+    // Imprime os caminhos mais curtos para todos os vértices
     for (int i = 0; i < V; i++) {
-        // printf("Path to Vertex %d is %d\n", i, array[i]);
+        printf("Caminho mais curto do vertice %d: %d\n", i, array[i]);
     }
 }
 
-// Sequential Implementation of Dijkstra's Algorithm
 void DijkstraSequential(Vertex *vertices, Edge *edges, int *weights, Vertex *root) {
     double start, end;
 
-    root->visited = TRUE;
-    int len[V];
-    len[root->title] = 0;
+    root->visited = TRUE;  // Marca o vértice inicial como visitado
+    int len[V];            // Vetor para armazenar os caminhos mínimos
+    len[root->title] = 0;  // O custo para o vértice inicial é 0
 
-    // Initialize distances
+    start = (double)clock() / CLOCKS_PER_SEC;  // Marca o início da execução
+
+    // Inicializa os custos para cada vértice
     for (int i = 0; i < V; i++) {
         if (vertices[i].title != root->title) {
+            // Encontra o peso da aresta entre o vértice inicial e os demais
             len[vertices[i].title] = findEdge(*root, vertices[i], edges, weights);
         } else {
-            vertices[i].visited = TRUE;
+            vertices[i].visited = TRUE;  // Marca o vértice inicial como visitado
         }
     }
 
-    start = (double)clock() / CLOCKS_PER_SEC; // Start time
-
+    // Itera sobre todos os vértices para calcular os caminhos mínimos
     for (int j = 0; j < V; j++) {
         Vertex u;
-        int h = minPath(vertices, len);
-        u = vertices[h];
+        int h = minPath(vertices, len);  // Encontra o próximo vértice com menor peso
+        u = vertices[h];                // Atualiza o vértice corrente
 
-        // Sequentially update distances
+        // Atualiza os custos dos vizinhos do vértice atual
         for (int i = 0; i < V; i++) {
-            if (vertices[i].visited == FALSE) {
-                int c = findEdge(u, vertices[i], edges, weights);
+            if (vertices[i].visited == FALSE) {  // Apenas para vértices não visitados
+                int c = findEdge(u, vertices[i], edges, weights);  // Peso da aresta
                 len[vertices[i].title] = minimum(len[vertices[i].title], len[u.title] + c);
             }
         }
     }
 
-    end = (double)clock() / CLOCKS_PER_SEC; // End time
-    printArray(len);
-    printf("Running time: %f ms\n", (end - start) * 1000);
+    end = (double)clock() / CLOCKS_PER_SEC;  // Marca o fim da execução
+
+    // Imprime o tempo de execução (em ms)
+    printf("Tempo de execucao: %f ms\n", (end - start) * 1000);
 }
 
-// Finds the edge that connects Vertex u with Vertex v
 int findEdge(Vertex u, Vertex v, Edge *edges, int *weights) {
+    // Encontra o peso de uma aresta entre dois vértices
     for (int i = 0; i < E; i++) {
         if (edges[i].u == u.title && edges[i].v == v.title) {
-            return weights[i];
+            return weights[i];  // Retorna o peso da aresta, se existir
         }
     }
-    return INT_MAX;
+    return INT_MAX;  // Retorna "infinito" se não houver aresta
 }
 
-// Returns the minimum between two integers
 int minimum(int A, int B) {
+    // Retorna o menor entre dois números
     return (A > B) ? B : A;
 }
 
-// Visits the vertices and looks for the lowest weight from the vertex
 int minWeight(int *len, Vertex *vertices) {
+    // Encontra o menor custo entre os vértices não visitados
     int minimum = INT_MAX;
     for (int i = 0; i < V; i++) {
         if (vertices[i].visited == FALSE && len[i] < minimum) {
@@ -94,24 +101,24 @@ int minWeight(int *len, Vertex *vertices) {
     return minimum;
 }
 
-// Localizes the vertex with the lowest weight path
 int minPath(Vertex *vertices, int *len) {
+    // Encontra o índice do vértice não visitado com o menor custo
     int min = minWeight(len, vertices);
     for (int i = 0; i < V; i++) {
         if (vertices[i].visited == FALSE && len[vertices[i].title] == min) {
-            vertices[i].visited = TRUE;
-            return i;
+            vertices[i].visited = TRUE;  // Marca como visitado
+            return i;  // Retorna o índice do vértice
         }
     }
-    return -1; // In case no valid vertex is found
+    return -1;
 }
 
 int main(void) {
-    Vertex vertices[V];
-    Edge edges[E];
-    int weights[E];
+    Vertex vertices[V];  // Cria os vértices
+    Edge edges[E];       // Cria as arestas
+    int weights[E];      // Cria os pesos das arestas
 
-    srand(time(NULL)); // Inicializa o gerador de números aleatórios
+    srand(0);  // Inicializa o gerador de números aleatórios
 
     // Inicializa os vértices
     for (int i = 0; i < V; i++) {
@@ -119,18 +126,17 @@ int main(void) {
         vertices[i] = a;
     }
 
-    // Gera arestas e pesos aleatórios
+    // Inicializa as arestas e seus pesos
     for (int i = 0; i < E; i++) {
-        edges[i].u = rand() % V; // Vértice inicial da aresta
-        edges[i].v = rand() % V; // Vértice final da aresta
-        weights[i] = rand() % 11; // Peso da aresta (0 a 10)
+        edges[i].u = rand() % V;
+        edges[i].v = rand() % V;
+        weights[i] = rand() % 11;  // Pesos entre 0 e 10
     }
 
-    // Seleciona o vértice raiz
-    Vertex root = {0, FALSE};
+    Vertex root = {0, FALSE};  // Define o vértice inicial (root)
 
     printf("Resultados para grafo aleatório com %d vértices:\n", V);
-    DijkstraSequential(vertices, edges, weights, &root);
+    DijkstraSequential(vertices, edges, weights, &root);  // Executa o algoritmo de Dijkstra
 
     return 0;
 }
